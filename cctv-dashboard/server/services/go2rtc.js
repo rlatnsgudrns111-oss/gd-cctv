@@ -24,42 +24,12 @@ const go2rtcService = {
   async addStream(streamKey, rtspUrl) {
     try {
       const encodedUrl = encodeRtspPassword(rtspUrl);
-      // 먼저 일반 RTSP로 등록
       await axios.put(`${GO2RTC_API}/api/streams?name=${encodeURIComponent(streamKey)}&src=${encodeURIComponent(encodedUrl)}`);
       console.log(`[go2rtc] 스트림 추가: ${streamKey}`);
-
       return true;
     } catch (err) {
       console.error(`[go2rtc] 스트림 추가 실패: ${streamKey}`, err.message);
       return false;
-    }
-  },
-
-  // H265 감지 시 ffmpeg 변환 소스로 교체
-  async checkAndAddTranscoding(streamKey, rtspUrl) {
-    try {
-      // 잠시 대기 후 코덱 확인
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      const response = await axios.get(`${GO2RTC_API}/api/streams?src=${streamKey}`);
-      const stream = response.data;
-
-      if (stream && stream.producers) {
-        const isH265 = stream.producers.some(p =>
-          (p.medias && p.medias.some(m => m.includes('H265'))) ||
-          (p.sdp && p.sdp.includes('H265'))
-        );
-
-        if (isH265) {
-          // H265이면 기존 스트림 삭제 후 ffmpeg 변환으로 재등록
-          await axios.delete(`${GO2RTC_API}/api/streams?src=${streamKey}`);
-          const ffmpegSrc = `ffmpeg:${rtspUrl}#video=h264`;
-          await axios.put(`${GO2RTC_API}/api/streams?name=${encodeURIComponent(streamKey)}&src=${encodeURIComponent(ffmpegSrc)}`);
-          console.log(`[go2rtc] ${streamKey}: H265 감지 → ffmpeg H264 변환 적용`);
-        }
-      }
-    } catch (err) {
-      // 코덱 확인 실패해도 기본 스트림은 유지
-      console.warn(`[go2rtc] ${streamKey} 코덱 확인 실패:`, err.message);
     }
   },
 
@@ -95,7 +65,6 @@ const go2rtcService = {
       const stream = streams[streamKey];
       if (!stream) return 'offline';
 
-      // producers가 있으면 연결됨
       if (stream.producers && stream.producers.length > 0) {
         return 'online';
       }
@@ -128,6 +97,7 @@ const go2rtcService = {
 };
 
 // 서버 시작 시 Supabase에서 카메라 목록을 가져와 go2rtc에 자동 등록
+// yaml에 이미 등록된 스트림은 건너뜀
 async function syncStreamsFromDB() {
   try {
     const supabase = require('../db/database');
@@ -145,16 +115,16 @@ async function syncStreamsFromDB() {
     const existingStreams = await go2rtcService.getStreams() || {};
 
     let success = 0;
+    let skipped = 0;
     for (const cam of cameras) {
       if (existingStreams[cam.stream_key]) {
-        console.log(`[go2rtc] ${cam.stream_key} 이미 등록됨 (yaml), 건너뜀`);
-        success++;
+        skipped++;
         continue;
       }
       const result = await go2rtcService.addStream(cam.stream_key, cam.rtsp_url);
       if (result) success++;
     }
-    console.log(`[go2rtc] Supabase에서 ${success}/${cameras.length}개 스트림 등록 완료`);
+    console.log(`[go2rtc] 동기화 완료: ${skipped}개 기존, ${success}개 추가`);
   } catch (err) {
     console.error('[go2rtc] 스트림 동기화 실패:', err.message);
   }

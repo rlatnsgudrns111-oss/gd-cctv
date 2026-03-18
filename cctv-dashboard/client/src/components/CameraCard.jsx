@@ -1,4 +1,4 @@
-// client/src/components/CameraCard.jsx - 개별 카메라 카드 컴포넌트
+// client/src/components/CameraCard.jsx - 개별 카메라 카드 컴포넌트 (즉시 연결)
 
 import React from 'react';
 import StatusBadge from './StatusBadge';
@@ -21,7 +21,7 @@ function CameraCard({ camera, onClick }) {
         <StatusBadge status={effectiveStatus} />
       </div>
 
-      {/* 영상 영역 */}
+      {/* 영상 영역 - 즉시 WebRTC 연결 */}
       <div className="aspect-video">
         <WebRTCPlayer
           streamKey={camera.streamKey}

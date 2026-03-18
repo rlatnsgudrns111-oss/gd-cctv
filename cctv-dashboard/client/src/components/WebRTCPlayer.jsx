@@ -1,4 +1,4 @@
-// client/src/components/WebRTCPlayer.jsx - WebRTC 영상 플레이어 (go2rtc 연동, 최적화)
+// client/src/components/WebRTCPlayer.jsx - WebRTC 영상 플레이어 (go2rtc 연동, 빠른 연결)
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 
@@ -11,10 +11,10 @@ function WebRTCPlayer({ streamKey, status, className = '' }) {
   const connectTimeoutRef = useRef(null);
   const mountedRef = useRef(true);
   const [connectionState, setConnectionState] = useState('connecting');
-  const [retryCount, setRetryCount] = useState(0);
-  const MAX_RETRIES = 3;
-  const CONNECT_TIMEOUT = 5000; // 5초 내 연결 안 되면 실패 처리
-  const RETRY_DELAY = 2000; // 2초 후 재시도
+  const retryCountRef = useRef(0);
+  const MAX_RETRIES = 5;
+  const CONNECT_TIMEOUT = 8000;
+  const RETRY_DELAYS = [500, 1000, 2000, 3000, 5000]; // 점진적 증가
 
   // WebRTC 연결 정리
   const cleanup = useCallback(() => {
@@ -50,37 +50,12 @@ function WebRTCPlayer({ streamKey, status, className = '' }) {
     }
   }, [streamKey]);
 
-  // WebRTC 연결 시작
+  // WebRTC 연결 시작 - 스트림 체크 제거, 바로 연결
   const startWebRTC = useCallback(async () => {
     if (!mountedRef.current) return;
 
     try {
       setConnectionState('connecting');
-
-      // 먼저 go2rtc에 스트림이 존재하는지 빠르게 확인
-      const checkController = new AbortController();
-      const checkTimeout = setTimeout(() => checkController.abort(), 3000);
-
-      try {
-        const checkRes = await fetch(`${GO2RTC_URL}/api/streams?src=${streamKey}`, {
-          signal: checkController.signal
-        });
-        clearTimeout(checkTimeout);
-
-        if (!checkRes.ok) {
-          if (mountedRef.current) setConnectionState('failed');
-          return;
-        }
-
-        const streamInfo = await checkRes.json();
-        // producers가 없으면 스트림 소스가 없는 것
-        if (!streamInfo.producers || streamInfo.producers.length === 0) {
-          // 연결 대기 중일 수 있으므로 바로 실패하지 않고 WebRTC 시도
-        }
-      } catch (e) {
-        clearTimeout(checkTimeout);
-        // 확인 실패해도 WebRTC 시도는 함
-      }
 
       const pc = new RTCPeerConnection({
         iceServers: [],
@@ -88,13 +63,12 @@ function WebRTCPlayer({ streamKey, status, className = '' }) {
       });
       pcRef.current = pc;
 
-      // 비디오만 수신 (오디오 제거로 연결 속도 향상)
+      // 비디오만 수신
       pc.addTransceiver('video', { direction: 'recvonly' });
 
-      // 연결 타임아웃 설정
+      // 연결 타임아웃
       connectTimeoutRef.current = setTimeout(() => {
-        if (mountedRef.current && connectionState !== 'connected') {
-          console.warn(`[WebRTC] ${streamKey} 연결 타임아웃`);
+        if (mountedRef.current && pcRef.current) {
           handleDisconnect();
         }
       }, CONNECT_TIMEOUT);
@@ -109,7 +83,7 @@ function WebRTCPlayer({ streamKey, status, className = '' }) {
           videoRef.current.srcObject = event.streams[0];
           if (mountedRef.current) {
             setConnectionState('connected');
-            setRetryCount(0);
+            retryCountRef.current = 0;
           }
         }
       };
@@ -129,12 +103,12 @@ function WebRTCPlayer({ streamKey, status, className = '' }) {
         }
       };
 
-      // SDP Offer 생성 및 go2rtc에 전송
+      // SDP Offer 생성 및 go2rtc에 전송 - 바로 시도
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
 
       const controller = new AbortController();
-      const fetchTimeout = setTimeout(() => controller.abort(), 4000);
+      const fetchTimeout = setTimeout(() => controller.abort(), 5000);
 
       const response = await fetch(`${GO2RTC_URL}/api/webrtc?src=${streamKey}`, {
         method: 'POST',
@@ -153,7 +127,6 @@ function WebRTCPlayer({ streamKey, status, className = '' }) {
       }));
     } catch (err) {
       if (!mountedRef.current) return;
-      console.warn(`[WebRTC] ${streamKey} 연결 실패:`, err.message);
       handleDisconnect();
     }
   }, [streamKey]);
@@ -171,24 +144,25 @@ function WebRTCPlayer({ streamKey, status, className = '' }) {
       pcRef.current = null;
     }
 
-    setRetryCount((prev) => {
-      const next = prev + 1;
-      if (next >= MAX_RETRIES) {
-        // 3회 실패 → 바로 HLS 폴백 시도, HLS도 안 되면 failed
-        fallbackToHLS();
-        return 0;
-      }
-      setConnectionState('connecting');
-      retryTimerRef.current = setTimeout(() => {
-        if (mountedRef.current) startWebRTC();
-      }, RETRY_DELAY);
-      return next;
-    });
+    const count = retryCountRef.current;
+    if (count >= MAX_RETRIES) {
+      fallbackToHLS();
+      retryCountRef.current = 0;
+      return;
+    }
+
+    retryCountRef.current = count + 1;
+    setConnectionState('connecting');
+    const delay = RETRY_DELAYS[Math.min(count, RETRY_DELAYS.length - 1)];
+    retryTimerRef.current = setTimeout(() => {
+      if (mountedRef.current) startWebRTC();
+    }, delay);
   }, [fallbackToHLS, startWebRTC]);
 
-  // 컴포넌트 마운트/업데이트 시 연결 시작
+  // 컴포넌트 마운트 시 즉시 연결
   useEffect(() => {
     mountedRef.current = true;
+    retryCountRef.current = 0;
     if (streamKey) {
       startWebRTC();
     } else {
@@ -210,10 +184,10 @@ function WebRTCPlayer({ streamKey, status, className = '' }) {
       {/* 로딩/재연결 오버레이 */}
       {connectionState === 'connecting' && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70">
-          <div className="w-8 h-8 border-2 border-blue-400 border-t-transparent rounded-full animate-spin mb-2" />
+          <div className="w-6 h-6 border-2 border-blue-400 border-t-transparent rounded-full animate-spin mb-1" />
           <span className="text-[10px] text-gray-400">
-            {retryCount > 0
-              ? `재연결 ${retryCount}/${MAX_RETRIES}`
+            {retryCountRef.current > 0
+              ? `재연결 시도 중...`
               : '연결 중...'}
           </span>
         </div>
@@ -221,7 +195,7 @@ function WebRTCPlayer({ streamKey, status, className = '' }) {
 
       {connectionState === 'failed' && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80">
-          <svg className="w-8 h-8 text-red-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-6 h-6 text-red-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                   d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
           </svg>

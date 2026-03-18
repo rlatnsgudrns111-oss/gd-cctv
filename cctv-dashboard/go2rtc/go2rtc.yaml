@@ -54,6 +54,32 @@ streams:
     - rtsp://ap4cc619:caps%40171@118.44.114.114:556/9/stream2
   cam_36:
     - rtsp://ap4cc619:caps%40171@118.44.114.114:556/10/stream2
+  cam_3:
+    - rtsp://a53b36af:caps692!@221.159.247.54:554/1/stream2
+  cam_4:
+    - rtsp://a53b36af:caps692!@221.159.247.54:554/2/stream2
+  cam_5:
+    - rtsp://a53b36af:caps692!@221.159.247.54:554/3/stream2
+  cam_6:
+    - rtsp://viewer:hulan1234!@tb-wellness.iptime.org:554/cam/realmonitor?channel=1&subtype=1
+  cam_18:
+    - rtsp://admin:26494DD8679F9FCBAE958BCDD1EF234D74C933FBDC2044F388A68EC6393FAD90@63560877.telecopview.co.kr:8554/live_01
+  cam_19:
+    - rtsp://admin:26494DD8679F9FCBAE958BCDD1EF234D74C933FBDC2044F388A68EC6393FAD90@63560877.telecopview.co.kr:8554/live_02
+  cam_20:
+    - rtsp://admin:26494DD8679F9FCBAE958BCDD1EF234D74C933FBDC2044F388A68EC6393FAD90@63560877.telecopview.co.kr:8554/live_03
+  cam_23:
+    - rtsp://admin:26494DD8679F9FCBAE958BCDD1EF234D74C933FBDC2044F388A68EC6393FAD90@63497825.telecopview.co.kr:8554/live_01
+  cam_24:
+    - rtsp://admin:26494DD8679F9FCBAE958BCDD1EF234D74C933FBDC2044F388A68EC6393FAD90@63497825.telecopview.co.kr:8554/live_02
+  cam_25:
+    - rtsp://admin:26494DD8679F9FCBAE958BCDD1EF234D74C933FBDC2044F388A68EC6393FAD90@63497825.telecopview.co.kr:8554/live_03
+  cam_28:
+    - rtsp://admin:26494DD8679F9FCBAE958BCDD1EF234D74C933FBDC2044F388A68EC6393FAD90@63497825.telecopview.co.kr:8554/live_01
+  cam_29:
+    - rtsp://admin:26494DD8679F9FCBAE958BCDD1EF234D74C933FBDC2044F388A68EC6393FAD90@63497825.telecopview.co.kr:8554/live_02
+  cam_30:
+    - rtsp://admin:26494DD8679F9FCBAE958BCDD1EF234D74C933FBDC2044F388A68EC6393FAD90@63497825.telecopview.co.kr:8554/live_03
 
 # 로그 레벨
 log:
