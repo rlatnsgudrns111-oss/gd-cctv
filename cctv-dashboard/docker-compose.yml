@@ -1,0 +1,48 @@
+# docker-compose.yml - Docker Compose 구성 (선택사항)
+
+version: '3.8'
+
+services:
+  # go2rtc 스트리밍 서버
+  go2rtc:
+    image: alexxit/go2rtc
+    container_name: cctv-go2rtc
+    restart: always
+    network_mode: host
+    volumes:
+      - ./go2rtc/go2rtc.yaml:/config/go2rtc.yaml
+    ports:
+      - "1984:1984"   # API
+      - "8555:8555/udp" # WebRTC
+
+  # 백엔드 API 서버
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: cctv-backend
+    restart: always
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - GO2RTC_API_URL=http://go2rtc:1984
+    volumes:
+      - ./server/db:/app/db
+    depends_on:
+      - go2rtc
+
+  # Nginx 웹 서버
+  nginx:
+    image: nginx:alpine
+    container_name: cctv-nginx
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./client/build:/var/www/cctv-dashboard/client/build
+    depends_on:
+      - backend
+      - go2rtc
