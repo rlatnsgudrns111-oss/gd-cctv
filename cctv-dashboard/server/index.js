@@ -11,6 +11,7 @@ require('./db/database');
 
 const authRoutes = require('./routes/auth');
 const cameraRoutes = require('./routes/cameras');
+const go2rtcService = require('./services/go2rtc');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -35,7 +36,12 @@ app.get('*', (req, res) => {
 });
 
 // 서버 시작
-app.listen(PORT, () => {
-  console.log(`[서버] CCTV 안전 현황판 서버 시작: http://localhost:${PORT}`);
+app.listen(PORT, async () => {
+  console.log(`[서버] CCTV 대시보드 서버 시작: http://localhost:${PORT}`);
   console.log(`[서버] go2rtc API: ${process.env.GO2RTC_API_URL || 'http://localhost:1984'}`);
+
+  // go2rtc에 Supabase 카메라 스트림 자동 등록 (3초 대기 후)
+  setTimeout(() => {
+    go2rtcService.syncStreamsFromDB();
+  }, 3000);
 });

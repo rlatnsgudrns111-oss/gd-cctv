@@ -44,10 +44,7 @@ export default function Login({ onLogin }) {
 
         {/* 타이틀 */}
         <div className="text-center mb-6">
-          <h1 className="text-lg font-bold text-white tracking-tight">강원개발공사</h1>
-          <p className="text-sm mt-1 font-medium" style={{ color: "#9ca3af" }}>
-            토목사업부 안전 현황판
-          </p>
+          <h1 className="text-lg font-bold text-white tracking-tight">CCTV 대시보드</h1>
         </div>
 
         {/* 로그인 카드 */}

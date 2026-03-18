@@ -40,10 +40,7 @@ function WebRTCPlayer({ streamKey, status, className = '' }) {
 
   // WebRTC 연결 시작
   const startWebRTC = useCallback(async () => {
-    if (status === 'offline') {
-      setConnectionState('failed');
-      return;
-    }
+    // status와 관계없이 항상 연결 시도 (실제 상태는 go2rtc가 판단)
 
     try {
       setConnectionState('connecting');
@@ -129,7 +126,7 @@ function WebRTCPlayer({ streamKey, status, className = '' }) {
 
   // 컴포넌트 마운트/업데이트 시 연결 시작
   useEffect(() => {
-    if (streamKey && status !== 'offline') {
+    if (streamKey) {
       startWebRTC();
     } else {
       setConnectionState('failed');
