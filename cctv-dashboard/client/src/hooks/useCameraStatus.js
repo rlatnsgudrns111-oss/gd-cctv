@@ -49,7 +49,7 @@ function useCameraStatus(token) {
     };
   }, [token, fetchCameras]);
 
-  return { cameras, summary, loading, error, refresh: fetchCameras };
+  return { cameras, setCameras, summary, loading, error, refresh: fetchCameras };
 }
 
 export default useCameraStatus;

@@ -1,18 +1,20 @@
 // client/src/pages/Dashboard.jsx - 메인 현황판 페이지
-// (gd-chatbot-main DashboardPage + ThemeStyles 디자인 패턴 기반)
 
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Video, Wifi, WifiOff, RefreshCw } from "lucide-react";
+import axios from "axios";
 import { KPICard, Card, DARK } from "../components/ThemeStyles";
 import LOGO_URI from "../logo";
 import CameraGrid from "../components/CameraGrid";
 import CameraModal from "../components/CameraModal";
 import useCameraStatus from "../hooks/useCameraStatus";
 
+const API_BASE = process.env.REACT_APP_API_URL || '';
+
 export default function Dashboard({ user, token, onLogout }) {
   const navigate = useNavigate();
-  const { cameras, summary, loading, error } = useCameraStatus(token);
+  const { cameras, setCameras, summary, loading, error, refresh } = useCameraStatus(token);
   const [selectedCamera, setSelectedCamera] = useState(null);
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -28,6 +30,38 @@ export default function Dashboard({ user, token, onLogout }) {
       hour: "2-digit", minute: "2-digit", second: "2-digit",
       hour12: false,
     });
+  };
+
+  // 드래그 앤 드롭 순서 변경
+  const handleReorder = async (reordered) => {
+    setCameras(reordered);
+
+    // 서버에 순서 저장
+    try {
+      const updates = reordered.map((cam, idx) => ({
+        id: cam.id,
+        displayOrder: idx + 1,
+      }));
+
+      await Promise.all(
+        updates.map(({ id, displayOrder }) =>
+          axios.put(`${API_BASE}/api/cameras/${id}`, { displayOrder }, {
+            headers: { Authorization: `Bearer ${token}` }
+          })
+        )
+      );
+    } catch (err) {
+      console.error('순서 저장 실패:', err);
+      refresh();
+    }
+  };
+
+  // 모달에서 카메라 정보 변경 시 목록 업데이트
+  const handleCameraUpdate = (updatedCamera) => {
+    setCameras(prev => prev.map(cam =>
+      cam.id === updatedCamera.id ? { ...cam, ...updatedCamera } : cam
+    ));
+    setSelectedCamera(updatedCamera);
   };
 
   return (
@@ -76,7 +110,7 @@ export default function Dashboard({ user, token, onLogout }) {
         </div>
       </header>
 
-      {/* KPI 요약 바 — gd-chatbot-main KPICard 스타일 적용 */}
+      {/* KPI 요약 바 */}
       <div className="px-6 py-4">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <KPICard
@@ -108,13 +142,22 @@ export default function Dashboard({ user, token, onLogout }) {
         ) : error ? (
           <div className="text-center py-12 text-red-400">{error}</div>
         ) : (
-          <CameraGrid cameras={cameras} onCameraClick={setSelectedCamera} />
+          <CameraGrid
+            cameras={cameras}
+            onCameraClick={setSelectedCamera}
+            onReorder={user?.role === "admin" ? handleReorder : null}
+          />
         )}
       </div>
 
       {/* 카메라 확대 모달 */}
       {selectedCamera && (
-        <CameraModal camera={selectedCamera} onClose={() => setSelectedCamera(null)} />
+        <CameraModal
+          camera={selectedCamera}
+          onClose={() => setSelectedCamera(null)}
+          token={token}
+          onUpdate={handleCameraUpdate}
+        />
       )}
     </div>
   );

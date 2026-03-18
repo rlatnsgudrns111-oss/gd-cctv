@@ -28,8 +28,6 @@ const go2rtcService = {
       await axios.put(`${GO2RTC_API}/api/streams?name=${encodeURIComponent(streamKey)}&src=${encodeURIComponent(encodedUrl)}`);
       console.log(`[go2rtc] 스트림 추가: ${streamKey}`);
 
-      // H265 감지 후 ffmpeg 변환 소스 추가
-      await this.checkAndAddTranscoding(streamKey, encodedUrl);
       return true;
     } catch (err) {
       console.error(`[go2rtc] 스트림 추가 실패: ${streamKey}`, err.message);

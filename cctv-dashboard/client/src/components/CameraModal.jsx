@@ -1,10 +1,82 @@
-// client/src/components/CameraModal.jsx - 카메라 확대 모달
+// client/src/components/CameraModal.jsx - 카메라 확대 모달 (제목/위치 수정 기능)
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
+import axios from 'axios';
 import StatusBadge from './StatusBadge';
 import WebRTCPlayer from './WebRTCPlayer';
 
-function CameraModal({ camera, onClose }) {
+const API_BASE = process.env.REACT_APP_API_URL || '';
+
+function EditableText({ value, field, onSave, className, editClassName }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [text, setText] = useState(value);
+  const [saving, setSaving] = useState(false);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditing]);
+
+  const handleSave = async () => {
+    const trimmed = text.trim();
+    if (!trimmed || trimmed === value) {
+      setIsEditing(false);
+      setText(value);
+      return;
+    }
+    setSaving(true);
+    try {
+      await onSave(field, trimmed);
+      setIsEditing(false);
+    } catch (err) {
+      console.error(`${field} 변경 실패:`, err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') handleSave();
+    if (e.key === 'Escape') {
+      setIsEditing(false);
+      setText(value);
+    }
+  };
+
+  if (isEditing) {
+    return (
+      <input
+        ref={inputRef}
+        type="text"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onKeyDown={handleKeyDown}
+        onBlur={handleSave}
+        disabled={saving}
+        className={`bg-transparent border-b-2 border-blue-400 outline-none px-1 py-0.5 ${editClassName || ''}`}
+      />
+    );
+  }
+
+  return (
+    <span
+      className={`cursor-pointer hover:text-blue-400 transition-colors group ${className || ''}`}
+      onClick={() => setIsEditing(true)}
+      title="클릭하여 수정"
+    >
+      {value}
+      <svg className="w-3 h-3 inline-block ml-1 text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+          d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+      </svg>
+    </span>
+  );
+}
+
+function CameraModal({ camera, onClose, token, onUpdate }) {
   const effectiveStatus = camera.liveStatus || camera.status;
 
   // ESC 키로 닫기
@@ -21,6 +93,14 @@ function CameraModal({ camera, onClose }) {
     if (e.target === e.currentTarget) onClose();
   };
 
+  // 필드 저장 (name 또는 location)
+  const handleFieldSave = async (field, value) => {
+    await axios.put(`${API_BASE}/api/cameras/${camera.id}`, { [field]: value }, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (onUpdate) onUpdate({ ...camera, [field]: value });
+  };
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -34,9 +114,21 @@ function CameraModal({ camera, onClose }) {
         {/* 헤더 */}
         <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: '#2a2d37' }}>
           <div className="flex items-center gap-4">
-            <h2 className="text-lg font-bold text-white">{camera.name}</h2>
+            <EditableText
+              value={camera.name}
+              field="name"
+              onSave={handleFieldSave}
+              className="text-lg font-bold text-white"
+              editClassName="text-lg font-bold text-white"
+            />
             <StatusBadge status={effectiveStatus} size="lg" />
-            <span className="text-sm" style={{ color: '#6b7280' }}>{camera.location}</span>
+            <EditableText
+              value={camera.location}
+              field="location"
+              onSave={handleFieldSave}
+              className="text-sm text-gray-500"
+              editClassName="text-sm text-gray-400"
+            />
           </div>
           <button
             onClick={onClose}

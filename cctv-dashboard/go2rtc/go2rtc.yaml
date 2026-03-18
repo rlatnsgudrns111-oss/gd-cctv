@@ -16,12 +16,44 @@ webrtc:
 ffmpeg:
   bin: "C:\\Users\\사용자\\AppData\\Local\\Microsoft\\WinGet\\Packages\\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\\ffmpeg-8.1-full_build\\bin\\ffmpeg.exe"
 
-# 스트림 설정 - H265 카메라는 ffmpeg로 H264 변환
+# 비밀번호에 @가 있는 카메라만 yaml에 등록 (나머지는 API로 on-demand 등록)
 streams:
   cam_2:
-    - "ffmpeg:rtsp://ap4cc619:caps%40171@118.44.114.114:556/9/stream1#video=h264"
-  cam_3:
-    - rtsp://a53b36af:caps692!@221.159.247.54:554/1/stream1
+    - rtsp://ap4cc619:caps%40171@118.44.114.114:556/9/stream2
+  cam_11:
+    - rtsp://x7188d2e:caps%40684@59.30.169.129:554/1/stream2
+  cam_12:
+    - rtsp://x7188d2e:caps%40684@59.30.169.129:554/2/stream2
+  cam_13:
+    - rtsp://x7188d2e:caps%40684@59.30.169.129:554/3/stream2
+  cam_14:
+    - rtsp://x7188d2e:caps%40684@59.30.169.129:554/4/stream2
+  cam_15:
+    - rtsp://x7188d2e:caps%40684@59.30.169.129:554/5/stream2
+  cam_16:
+    - rtsp://x7188d2e:caps%40684@59.30.169.129:554/6/stream2
+  cam_17:
+    - rtsp://x7188d2e:caps%40684@59.30.169.129:554/7/stream2
+  cam_21:
+    - rtsp://eu3ac1a7:caps%40171@192.168.0.210:554/path
+  cam_22:
+    - rtsp://eu3ac1a7:caps%40171@192.168.0.210:554/path
+  cam_26:
+    - rtsp://eu3ac1a7:caps%40171@192.168.0.210:554/path
+  cam_27:
+    - rtsp://eu3ac1a7:caps%40171@192.168.0.210:554/path
+  cam_31:
+    - rtsp://cl389d2f:caps%40171@210.105.25.252:554/4/stream2
+  cam_32:
+    - rtsp://eo39b9bd:caps%40171@118.44.114.114:554/1/stream2
+  cam_33:
+    - rtsp://ap4cc7b3:caps%40171@118.44.114.114:555/1/stream2
+  cam_34:
+    - rtsp://ap4cc7b3:caps%40171@118.44.114.114:555/7/stream2
+  cam_35:
+    - rtsp://ap4cc619:caps%40171@118.44.114.114:556/9/stream2
+  cam_36:
+    - rtsp://ap4cc619:caps%40171@118.44.114.114:556/10/stream2
 
 # 로그 레벨
 log:
